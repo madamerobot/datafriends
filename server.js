@@ -39,24 +39,18 @@ function startServer (client, schema) {
   const app = express()
   app.use(cors())
 
-  // serve React Frontend
+  //Serve React Frontend
   app.use('/client', express.static(path.join(__dirname, 'dist')))
 
-  // ship own GraphiQL to be completely flexible
-  const ui = cfGraphql.helpers.graphiql({title: 'datafriends'})
-  app.get('/', (_, res) => res.set(ui.headers).status(ui.statusCode).end(ui.body))
+  //Ship own GraphiQL to be completely flexible
+  const ui = cfGraphql.helpers.graphiql({title: '🎨Graphiql'})
+  app.get('/cli', (_, res) => res.set(ui.headers).status(ui.statusCode).end(ui.body))
 
-  // enable GraphQL extension to retrieve GraphQL versoin and
-  // detailed HTTP request information
+  //Enable GraphQL extension to retrieve GraphQL versoin and
+  //detailed HTTP request information
   const opts = {version: true, timeline: true, detailedErrors: false}
   const ext = cfGraphql.helpers.expressGraphqlExtension(client, schema, opts)
   app.use('/graphql', graphqlHTTP(ext))
-
-  // app.use('/graphql', graphqlHTTP({
-  //   context: {entryLoader: client.createEntryLoader()},
-  //   graphql: true,
-  //   schema,
-  // }))
 
   app.listen(port)
 
