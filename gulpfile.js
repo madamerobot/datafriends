@@ -1,79 +1,50 @@
+// Declarations and dependencies 
+// ----------------------------------------------------------------------------
 const gulp = require('gulp')
-const nodemon = require('gulp-nodemon')
-const babel = require('gulp-babel')
 const browserify = require('browserify')
-const gulpUtil = require('gulp-util')
-const sass = require('gulp-sass')
-const watchify = require('watchify')
-const uglify = require('gulp-uglify');
-const buffer = require('vinyl-buffer');
 const source = require('vinyl-source-stream')
+const gutil = require('gulp-util')
+const babelify = require('babelify')
+const nodemon = require('gulp-nodemon')
 
-const src = './public/src'
-const dest = './public/dist'
+// Gulp tasks
+// ----------------------------------------------------------------------------
+gulp.task('compile', () => {
+  bundleApp()
+})
 
-gulp.task('watchStyles', () => {
-  gulp.watch('public/src/styles/**/*.scss', () => {
-    gulp.start('sass')
+gulp.task('start', () => {
+  nodemon({
+    script: 'server.js'
+    , ext: 'js html'
+    , env: { 'NODE_ENV': 'development' }
   })
-
-  gulp.watch('./public/static/**', () => {
-    gulp.dest('./public/dist/')
-  })
 })
 
-gulp.task('watchJs', () => { 
-  const b = watchify(browserify('./public/src/js/app.js', watchify.args))
-    .transform('babelify', {
-      presets: ['es2015'],
-      ignore: /\/node_modules\/(?!app\/)/
-    })
-
-  b.on('update', rebundle)
-  b.on('log', gulpUtil.log.bind(gulpUtil))
-
-  function rebundle() {
-    return b.bundle()
-      .on('error', gulpUtil.log)
-      .pipe(source('app.js'))
-      .pipe(gulp.dest('./public/dist/js'))
-  }
-
-  return rebundle()
+gulp.task('watch', () => {
+  gulp.watch(['./public/src/js/*.js'])
 })
 
-//Compiling scss files into css files
-gulp.task('sass', () => {
-  return gulp.src('./public/src/styles/app.scss')
-    .pipe(sass().on('error', sass.logError))
-    .pipe(gulp.dest('./public/dist/css'))
-})
+// When running 'gulp' as a command from Terminal, this task will fire
+// It will start watching for changes in every .js file
+// If there is a change, the task 'scripts' defined above will fire
+gulp.task('default', ['start', 'compile', 'watch'])
 
-gulp.task('static', () => {
-  return gulp.src('./public/static/**')
-    .pipe(gulp.dest('./public/dist/'))
-})
-
-//Compile ES6 js files into ES2015
-gulp.task('browserify', () => {
-  var b = browserify('./public/src/js/app.js', {
+// Private Functions
+// ----------------------------------------------------------------------------
+function bundleApp () {
+  // Browserify will bundle all our js files together in to one and will let us use
+  // modules in the front end
+  const appBundler = browserify({
+    entries: './public/src/js/index.js',
     debug: true
-  }).transform('babelify', {
-    presets: ['es2015'],
-    ignore: /\/node_modules\/(?!app\/)/
   })
 
-  b.on('log', function (msg) {
-    console.log(msg)
-  })
-
-  return b.bundle()
-    .on('error', gulpUtil.log)
-    .pipe(source(src))
-    .pipe(buffer())
-    .pipe(uglify())
-    .pipe(gulp.dest('./public/dist/js'))
-})
-
-gulp.task('watch', ['watchStyles', 'watchJs'])
-gulp.task('default', ['static', 'sass', 'browserify'])
+  appBundler
+    // Transform ES6 and JSX to ES5 with babelify
+    .transform('babelify', { presets: ['es2015', 'react'] })
+    .bundle()
+    .on('error', gutil.log)
+    .pipe(source('index.js'))
+    .pipe(gulp.dest('./public/dist/js/'))
+}
